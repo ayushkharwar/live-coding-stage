@@ -32,9 +32,9 @@ sh ~/.dsh/skills/live-coding-stage/stage.sh <project-dir> \
 Flags: `--name` (filename inside the project, default = payload basename),
 `--run` (command for the second terminal, omit to skip), `--no-rain`,
 `--fps N`, `--keep` (leave the previous window open), `--wait SECONDS`,
-`--speed turbo|fast|normal|slow` (default `fast`: 238 chars/s, 3.8 s for 900
-characters. `normal` is 45 chars/s for showing every line, `turbo` is about
-400 chars/s).
+`--speed turbo|fast|normal|slow` (default `fast`: 505 chars/s, so a 7,438
+character file takes 14.7 s. `normal` is 45 chars/s for showing every line,
+`turbo` is faster still and unmeasured).
 
 The command does the whole cycle and prints the result, so it needs no second
 step: it closes the previous staged window, opens one new window, streams the
@@ -77,16 +77,16 @@ A clean log has no `resync`, no `insert rejected`, no `final mismatch`, and
 | writing under an open buffer leaves the editor dirty | revert the editor after any repair |
 | document edits do not move the caret, so the view never scrolls | the caret is moved to the insertion point and revealed after every batch; the log prints `view: lines A-B of N` as proof |
 | VS Code auto-closes quotes and brackets while typing | the buffer is compared with the payload prefix every 8 characters and repaired, so what is on screen stays correct |
-| a round trip per character caps typing at about 45 chars/s | characters are inserted in batches (`--speed`), which reaches 238 chars/s |
+| a round trip per character caps typing at about 45 chars/s | characters are inserted in batches (`--speed`), which reaches 505 chars/s |
 | dev-host windows close, taking the run with them | the payload is copied to `state/` first, and every step logs before it acts |
 | nothing closed the old window | each staged window watches `.live-typer/control.json` and closes itself on request, writing `closed.marker` first so `stage.sh` waits on a fact |
 
 ## Measured, for reference
 
 Rain at 22 fps in a 120x40 panel costs 2.9 percent of one core, 13.8 KB a
-frame. Typing at `fast` runs 238 characters a second, so 904 characters take
-3.8 seconds, and the buffer ends byte-identical to the payload with zero repair
-passes.
+frame. Typing at `fast` runs 505 characters a second, so a 7,438 character
+payload takes 14.7 seconds, the view ends on the last line of 231, and the
+buffer ends byte-identical to the payload with zero repair passes.
 
 ## Layout
 

@@ -33,15 +33,15 @@ speed   : fast
 
 20:16:29  speed: fast (batch 3)
 20:16:30  rain terminal started
-20:16:31  typing 904 chars into access_granted.py (buffer 0)
-20:16:34  typed 452/904
-20:16:35  typed 904/904, buffer 904 chars in 3.8s (238 chars/s),
-          path: editor.edit 337x, type 0x
-20:16:35  view: lines 9-38 of 38, end on screen: true
-20:16:35  ran: python3 access_granted.py
-20:16:35  done
+20:22:01  typing 7438 chars into solar_system.html (buffer 0)
+20:22:07  typed 1859/7438
+20:22:16  typed 7438/7438, buffer 7438 chars in 14.7s (505 chars/s),
+          path: editor.edit 2111x, type 0x
+20:22:16  view: lines 202-231 of 231, end on screen: true
+20:22:17  ran: xdg-open solar_system.html
+20:22:17  done
 
-RESULT  : IDENTICAL (904 bytes, byte-for-byte)
+RESULT  : IDENTICAL (7438 bytes, byte-for-byte)
 ```
 
 The caret line is the scroll proof: the view was showing the end of the file,
@@ -60,7 +60,9 @@ sh ~/.dsh/skills/live-coding-stage/stage.sh ~/projects/demo \
 
 The command closes any window staged earlier, opens one new window, types the
 payload, waits for typing to end, and compares the result against the payload
-byte for byte before it returns.
+byte for byte before it returns. `assets/demos/solar_system.html` is a good
+first payload: a 3D solar system with drag, zoom, click to inspect, and pause,
+written with no dependencies so it runs from `file://`.
 
 ```sh
 # read a run's log
@@ -76,8 +78,8 @@ Flags: `--name` for the filename inside the project, `--no-rain`, `--fps`,
 
 | Speed | Batch | Measured | Use it when |
 | --- | --- | --- | --- |
-| `turbo` | 6 chars | about 400 chars/s | the file is long and the point is the result |
-| `fast` (default) | 3 chars | 238 chars/s, 3.8 s for 904 chars | normal showing off |
+| `turbo` | 10 chars | unmeasured, faster than `fast` | the file is long and the point is the result |
+| `fast` (default) | 4 chars | 505 chars/s, 14.7 s for 7,438 chars | normal showing off |
 | `normal` | 1 char | 45 chars/s | the audience wants to read every line as it appears |
 | `slow` | 1 char | 22 chars/s | teaching, or a very short payload |
 
@@ -88,6 +90,7 @@ Flags: `--name` for the filename inside the project, `--no-rain`, `--fps`,
 | `stage.sh` | closes the last staged window, writes the mission file, opens one window, streams the run log, verifies the result |
 | `typer/` | a VS Code extension loaded as a dev host. Reads the mission, types the payload, runs the command |
 | `assets/rain.py` | the background animation, standard library only |
+| `assets/demos/` | payloads to stage: `access_granted.py`, `solar_system.html` |
 | `.live-typer/` | per project runtime folder: mission, log, close marker |
 
 The extension watches a control file in each staged window. When `stage.sh`
@@ -126,7 +129,7 @@ Measured on a Lenovo LOQ 15IRX9, i7-13650HX, 120x40 terminal:
 | rain frame rate | 22.0 fps |
 | rain CPU, one core | 2.9 percent |
 | bytes per frame | 13.8 KB |
-| typing speed, `fast` | 238 characters per second, 3.8 s for 904 characters |
+| typing speed, `fast` | 505 characters per second, 14.7 s for 7,438 characters |
 | typing speed, `normal` | 45 characters per second, about 20 s for 900 characters |
 | drift between typed buffer and payload | 0 bytes |
 

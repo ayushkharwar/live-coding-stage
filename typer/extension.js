@@ -38,8 +38,8 @@ const RESYNC_EVERY = 8;
 
 // batch size, per-batch delay range, newline delay range (milliseconds)
 const SPEEDS = {
-  turbo: { batch: 6, min: 0, spread: 2, nlMin: 4, nlSpread: 5 },
-  fast: { batch: 3, min: 1, spread: 3, nlMin: 8, nlSpread: 8 },
+  turbo: { batch: 10, min: 0, spread: 1, nlMin: 3, nlSpread: 3 },
+  fast: { batch: 4, min: 1, spread: 2, nlMin: 4, nlSpread: 4 },
   normal: { batch: 1, min: 7, spread: 12, nlMin: 26, nlSpread: 30 },
   slow: { batch: 1, min: 22, spread: 22, nlMin: 60, nlSpread: 50 },
 };

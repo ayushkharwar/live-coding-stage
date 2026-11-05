@@ -1,0 +1,230 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>solar system, 3d</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #04060b; overflow: hidden;
+    font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; color: #cfe3ff; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 16px; top: 14px; pointer-events: none; color: #5e7a9e; }
+  #hud b { color: #7fd0ff; }
+  kbd { color: #7fd0ff; }
+  #info { position: fixed; right: 16px; bottom: 16px; width: 250px;
+    border: 1px solid #16283f; border-radius: 12px; padding: 12px 14px;
+    background: #070d18e6; display: none; }
+  #info h2 { margin: 0 0 8px; font-size: 14px; color: #93e6ff; letter-spacing: .04em; }
+  #info div { color: #8fa6c4; }
+  #info span { color: #dbe9ff; }
+</style>
+
+<canvas id="c"></canvas>
+<div id="hud">
+  <kbd>drag</kbd> orbit &nbsp; <kbd>wheel</kbd> zoom &nbsp; <kbd>click</kbd> inspect &nbsp; <kbd>space</kbd> pause
+</div>
+<div id="info"><h2></h2><div id="facts"></div></div>
+
+<script>
+const cv = document.getElementById("c");
+const g = cv.getContext("2d");
+const info = document.getElementById("info");
+const dpr = Math.min(devicePixelRatio || 1, 2);
+
+// name, orbit radius in px, body radius, colour, period in earth years
+const BODIES = [
+  ["mercury", 46, 1.8, "#b9a695", 0.24],
+  ["venus", 66, 2.8, "#e8c07a", 0.62],
+  ["earth", 88, 3.0, "#5aa9f0", 1.0],
+  ["mars", 110, 2.3, "#d1603d", 1.88],
+  ["jupiter", 146, 6.2, "#d8a878", 11.9],
+  ["saturn", 182, 5.2, "#e2cda2", 29.5],
+  ["uranus", 214, 3.8, "#8fd8e0", 84.0],
+  ["neptune", 240, 3.6, "#5b7cf0", 164.8],
+];
+
+const cam = { az: -0.55, el: 0.40, dist: 430 };
+let W = 0, H = 0, t = 0, last = 0, paused = false;
+let drag = null, selected = null, hit = [];
+
+const stars = Array.from({ length: 460 }, () => ({
+  x: (Math.random() - 0.5) * 2600,
+  y: (Math.random() - 0.5) * 2600,
+  z: (Math.random() - 0.5) * 2600,
+  r: Math.random() * 1.2 + 0.2,
+  a: Math.random() * 0.5 + 0.2,
+}));
+
+function resize() {
+  W = cv.width = Math.floor(innerWidth * dpr);
+  H = cv.height = Math.floor(innerHeight * dpr);
+  cv.style.width = innerWidth + "px";
+  cv.style.height = innerHeight + "px";
+}
+addEventListener("resize", resize);
+resize();
+
+let cy = 1, sy = 0, ce = 1, se = 0;
+
+// world point -> screen point, or null when it is behind the camera
+function project(x, y, z, fov = 820) {
+  const x1 = x * cy - z * sy;
+  const z1 = x * sy + z * cy;
+  const y1 = y * ce - z1 * se;
+  const z2 = y * se + z1 * ce + cam.dist;
+  if (z2 < 24) return null;
+  const k = fov / z2;
+  return { x: W / 2 + x1 * k, y: H / 2 + y1 * k, z: z2, k };
+}
+
+function orbitPath(radius) {
+  const pts = [];
+  for (let i = 0; i <= 96; i += 1) {
+    const a = (i / 96) * Math.PI * 2;
+    const p = project(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+    if (p) pts.push(p);
+  }
+  return pts;
+}
+
+function strokePath(pts, colour, width) {
+  if (pts.length < 2) return;
+  g.beginPath();
+  g.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i += 1) g.lineTo(pts[i].x, pts[i].y);
+  g.strokeStyle = colour;
+  g.lineWidth = width * dpr;
+  g.stroke();
+}
+
+function drawSun() {
+  const p = project(0, 0, 0);
+  if (!p) return;
+  const r = 15 * p.k * dpr * 1.6;
+  const halo = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 7);
+  halo.addColorStop(0, "rgba(255, 226, 150, 0.85)");
+  halo.addColorStop(0.18, "rgba(255, 170, 60, 0.30)");
+  halo.addColorStop(1, "rgba(255, 140, 30, 0)");
+  g.fillStyle = halo;
+  g.beginPath();
+  g.arc(p.x, p.y, r * 7, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#fff3c4";
+  g.beginPath();
+  g.arc(p.x, p.y, r, 0, Math.PI * 2);
+  g.fill();
+}
+
+function drawStars() {
+  for (const s of stars) {
+    const p = project(s.x, s.y, s.z, 820);
+    if (!p) continue;
+    const a = s.a * Math.min(1, 1.4 - p.z / (cam.dist * 3));
+    if (a <= 0.02) continue;
+    g.fillStyle = "rgba(190, 215, 255, " + a.toFixed(3) + ")";
+    const r = Math.max(0.5, s.r * dpr * Math.min(1.6, 300 / p.z));
+    g.fillRect(p.x, p.y, r, r);
+  }
+}
+
+function drawPlanets() {
+  const scene = [];
+  for (let i = 0; i < BODIES.length; i += 1) {
+    const [name, orbit, size, colour, period] = BODIES[i];
+    const a = (t / period) * Math.PI * 2 + i * 1.7;
+    const p = project(Math.cos(a) * orbit, 0, Math.sin(a) * orbit);
+    if (p) scene.push({ name, size, colour, period, orbit, p, depth: p.z });
+  }
+  // painter's algorithm: far bodies first so near ones overlap them
+  scene.sort((a, b) => b.depth - a.depth);
+  hit = scene;
+
+  for (const b of scene) {
+    const r = Math.max(1.2, b.size * b.p.k * dpr * 1.35);
+    const s = g.createRadialGradient(
+      b.p.x - r * 0.35, b.p.y - r * 0.35, r * 0.1, b.p.x, b.p.y, r * 1.5
+    );
+    s.addColorStop(0, "#ffffff");
+    s.addColorStop(0.35, b.colour);
+    s.addColorStop(1, "#05070d");
+    g.fillStyle = s;
+    g.beginPath();
+    g.arc(b.p.x, b.p.y, r, 0, Math.PI * 2);
+    g.fill();
+
+    if (b.name === "saturn") {
+      g.save();
+      g.translate(b.p.x, b.p.y);
+      g.rotate(cam.az * 0.55);
+      g.strokeStyle = "rgba(226, 205, 162, 0.55)";
+      g.lineWidth = Math.max(1, 1.6 * dpr);
+      g.beginPath();
+      g.ellipse(0, 0, r * 2.1, r * 0.62, 0, 0, Math.PI * 2);
+      g.stroke();
+      g.restore();
+    }
+    if (selected === b.name) {
+      g.strokeStyle = "rgba(127, 208, 255, 0.85)";
+      g.lineWidth = dpr;
+      g.beginPath();
+      g.arc(b.p.x, b.p.y, r + 6 * dpr, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = "rgba(160, 190, 225, 0.75)";
+    g.font = Math.round(10.5 * dpr) + "px ui-monospace, Menlo, monospace";
+    g.fillText(b.name, b.p.x + r + 5 * dpr, b.p.y + 3 * dpr);
+  }
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - (last || now)) / 1000);
+  last = now;
+  if (!paused) t += dt * 0.16;
+  cy = Math.cos(cam.az); sy = Math.sin(cam.az);
+  ce = Math.cos(cam.el); se = Math.sin(cam.el);
+
+  g.fillStyle = "#04060b";
+  g.fillRect(0, 0, W, H);
+  drawStars();
+  for (const [name, orbit] of BODIES) {
+    strokePath(orbitPath(orbit), "rgba(70, 110, 165, 0.22)", 1);
+  }
+  drawSun();
+  drawPlanets();
+  requestAnimationFrame(frame);
+}
+
+cv.addEventListener("pointerdown", (e) => {
+  drag = { x: e.clientX, y: e.clientY, az: cam.az, el: cam.el };
+});
+addEventListener("pointerup", () => { drag = null; });
+addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  cam.az = drag.az - (e.clientX - drag.x) * 0.006;
+  cam.el = Math.max(-1.35, Math.min(1.35, drag.el + (e.clientY - drag.y) * 0.004));
+});
+addEventListener("wheel", (e) => {
+  e.preventDefault();
+  cam.dist = Math.max(130, Math.min(900, cam.dist + e.deltaY * 0.4));
+}, { passive: false });
+addEventListener("keydown", (e) => {
+  if (e.code === "Space") { paused = !paused; e.preventDefault(); }
+});
+
+cv.addEventListener("click", (e) => {
+  const x = e.clientX * dpr, y = e.clientY * dpr;
+  let best = null, bestD = 24 * dpr;
+  for (const b of hit) {
+    const d = Math.hypot(b.p.x - x, b.p.y - y);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  if (!best) { info.style.display = "none"; selected = null; return; }
+  selected = best.name;
+  info.style.display = "block";
+  info.querySelector("h2").textContent = best.name;
+  info.querySelector("#facts").innerHTML =
+    "orbit <span>" + best.orbit + " px</span><br>" +
+    "period <span>" + best.period + " earth years</span><br>" +
+    "radius <span>" + best.size + " px</span><br>" +
+    "from sun <span>" + (best.depth - cam.dist).toFixed(0) + " units</span>";
+});
+
+requestAnimationFrame(frame);
+</script>
