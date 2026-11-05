@@ -1,0 +1,4 @@
+state/
+.live-typer/
+__pycache__/
+*.pyc

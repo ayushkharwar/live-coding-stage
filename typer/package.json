@@ -1,0 +1,11 @@
+{
+  "name": "live-coding-stage",
+  "displayName": "Live Coding Stage",
+  "description": "Types a payload file into the editor visibly, then runs it, with a glitch binary rain in the terminal.",
+  "version": "0.1.0",
+  "publisher": "zen",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"]
+}
